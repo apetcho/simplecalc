@@ -8,6 +8,10 @@ import time
 import sys
 from typing import Optional, Callable, Any
 
+# -*-
+# python PyCalcServer.py
+# -*-
+
 
 def get_operation(op):
     """Return a random arithmetic operator."""

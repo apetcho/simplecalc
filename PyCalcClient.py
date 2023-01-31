@@ -6,6 +6,9 @@ import sys
 import json
 from typing import Optional, Callable, Any, Tuple
 
+# -*-
+# python PyCalcClient 10 0.1
+# -*-
 
 def on_quit(signum, args):
     """Handle the CTRL-C signal"""
