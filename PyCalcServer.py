@@ -1,113 +1,46 @@
 #!/usr/bin/env python3
-import socket
+#!/usr/bin/env python3
 import random
+import socket
+import signal
 import json
-import matplotlib.pyplot as plt
-
-def plotdata(data:dict):
-    """Plot data"""
-    xdata = data["x"]
-    ydata = data["y"]
-    num = data["num"]
-    elapsed = data["elapsed"]
-    # ---------  -----------
-    # |       |  |          |
-    # | y vs x|  | el  vs i |
-    # ---------  -----------
-    #
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax2 = fig.add_subplot(1, 2, 2)
-    ax1.plot(xdata, ydata)
-    indices = list(range(num))
-    ax2.plot(indices, elapsed)
-    plt.savefig("calcdata.png")
-    plt.show()
+import time
+import sys
+from typing import Optional, Callable, Any
 
 
-def get_random_number_of_computation() -> int:
-    """Get ...."""
-    nums = [1, 10, 100, 1000]
-    return random.choice(nums)
+def get_operation(op):
+    """Return a random arithmetic operator."""
+    opmap = {}
+    opmap["+"] = lambda x, y: x + y
+    opmap["-"] = lambda x, y: x - y
+
+    return opmap[op]
 
 
-def check_request(request:str) -> int:
-    """Check message."""
-    if request.strip() == "quit":
-        return 0 # Ok
-    req = request.strip().split()
-    # ["calc", ...]
-    if req[0] != "calc":
-        return -1 # Error
-    if len(req) == 2 and req[1] != "shutdown":
-        return -1 # Error
-    # ["calc", "4", "+", "5"]
-    if len(req) == 4 and req[2] in ("+", "-"):
-        return 0  # Ok
-    if len(req) == 2 and req[1] == "shutdown":
-        return 0 # Ok
-    return -1 # Error
+def on_quit(signum, args):
+    """Handle the CTRL-C signal"""
+    if signum == signal.SIGINT:
+        sys.exit(0)   # Quit gracefully
 
 
-def read_request() -> str:
-    """Read the client request."""
-    req = input("> ")
-    return req
-    
-
-def main():
-    """Client main app."""
-    SERVER = ("127.0.0.1", 5500)
-    header = "Simple Calculator Client"
-    print(f"-*--{'-'*len(header)}--*-")
-    print(f"-*- {header} -*-")
-    print(f"-*--{'-'*len(header)}--*-")
-    # print("You send a request to server using an expression as follows:")
-    # print(" calc num1 op num2")
-    # print("where num1 and num2 are integer and op is either + or -")
-    # print("Example:")
-    # print(" calc 3 + 2")
-    # print(" calc 23 - 99")
-    # print("\nTo shutdown the server, send the following request:")
-    # print(" calc shutdown")
-    # print("\nTo quit this application send the following request:")
-    # print("quit")
-
-    sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    req = f"{get_random_number_of_computation()}".encode("utf-8")
-    sockfd.sendto(req, SERVER)
-    answer = ""
-    while True:
-        response, addr = sockfd.recvfrom(2048)
-        if len(response) == 0:
-            break
-        answer += response.decode("utf-8")
-    response = json.loads(answer)
-
-
-    # print(f"{json.dumps(response, indent=4)}")
-    print(f"{response}")
-    plotdata(response)
-    
-    # while True:
-    #     req = read_request()
-    #     if req == "quit":
-    #         break
-    #     status = check_request(req)
-    #     while status != 0:
-    #         print("\x1b[31mBad request format\x1b[m. Try again")
-    #         req = read_request()
-    #         if req == "quit" or req.strip().split()[1] == "shutdown":
-    #             break
-    #         status = check_request(req)
-    #     sockfd.sendto(req.encode("utf-8"), SERVER)
-    #     response, addr = sockfd.recvfrom(1024)
-    #     answer = response.decode("utf-8")
-    #     print(f"{answer}")
-
-    sockfd.close()
-        
+def main(host="127.0.0.1", port=5000, buflen=4096):
+    """Main server entry."""
+    random.seed(time.time())
+    signal.signal(signal.SIGINT, on_quit)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sockfd:
+        sockfd.bind((host, port))
+        print(f"Server ready at {sockfd.getsockname()}")
+        while True:
+            req, address = sockfd.recvfrom(buflen)
+            req = req.decode("utf-8").strip().split()
+            x = req[1]
+            op = req[2]
+            y = req[3]
+            fun = get_operation(op)
+            result = fun(x, y)
+            message = f"ans {result}".encode("utf-8")
+            sockfd.sendto(message, address)
 
 if __name__ == "__main__":
     main()
