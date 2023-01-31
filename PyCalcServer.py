@@ -38,9 +38,9 @@ def main(host="127.0.0.1", port=5000, buflen=4096):
         while True:
             req, address = sockfd.recvfrom(buflen)
             req = req.decode("utf-8").strip().split()
-            x = req[1]
+            x = int(req[1])
             op = req[2]
-            y = req[3]
+            y = int(req[3])
             fun = get_operation(op)
             result = fun(x, y)
             message = f"ans {result}".encode("utf-8")
