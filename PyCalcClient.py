@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+from cProfile import label
 import random
 import socket
 import signal
 import sys
-import json
+import matplotlib.pyplot as plt
+import time
 from typing import Optional, Callable, Any, Tuple
 
 # -*-
@@ -26,16 +28,16 @@ def get_random_args() -> Tuple[int, int]:
     return (x, y)
 
 
-def run(host="127.0.0.1", port=5000, buflen=4096):
+def run(ncalc, delay, host="127.0.0.1", port=5000, buflen=4096):
     """Main server entry."""
     signal.signal(signal.SIGINT, on_quit)
-    while len(sys.argv) != 3:
-        print("Incorrect command")
-        print(f"usage: ./{sys.argv[0]} <ncalc> <delay>")
-        print("Example:")
-        print(f"    ./{sys.argv[0]} 10 0.1\n")
-    ncalc = int(sys.argv[1])
-    delay = float(sys.argv[2])
+    # while len(sys.argv) != 3:
+    #     print("Incorrect command")
+    #     print(f"usage: ./{sys.argv[0]} <ncalc> <delay>")
+    #     print("Example:")
+    #     print(f"    ./{sys.argv[0]} 10 0.1\n")
+    #ncalc = int(sys.argv[1])
+    #delay = float(sys.argv[2])
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sockfd:
         sockfd.connect((host, port))
@@ -49,6 +51,7 @@ def run(host="127.0.0.1", port=5000, buflen=4096):
             sockfd.settimeout(delay)
             try:
                 response = sockfd.recv(buflen).decode("utf-8")
+                print(f" -> Received {response!r} from SimpleCalcServer")
             except socket.timeout:
                 response = "n"
             if response == "n":
@@ -61,8 +64,29 @@ def run(host="127.0.0.1", port=5000, buflen=4096):
 
 def main():
     """Main entry"""
-    out = run()
-    print(f"Result:\n{out}")
+    timings = []
+    rates = []
+    for delay in (0.001, 0.01):
+        for ncalc in (1, 10, 100, 1000):
+            tic = time.time()
+            out = run(ncalc, delay)
+            toc = time.time()
+            runtime = toc - tic
+            rate = len([x for x in out if x != 'n']) / len(out)
+            rates.append((ncalc, delay, rate))
+            timings.append((ncalc, delay, runtime))
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 2, 1)
+    x1data = [item[-1] for item in timings]
+    ax1.plot(x1data, lw=2.0)
+    ax1.set_title("Completion times")
+    ax2 = fig.add_subplot(1, 2, 2)
+    x2data = [item[-1] for item in rates]
+    ax2.plot(x2data, lw=2)
+    ax2.set_title("Rate of success")
+    plt.savefig("simplecalc.png")
+    plt.show()
 
 
 
