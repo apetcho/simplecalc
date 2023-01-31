@@ -61,8 +61,10 @@ def run(ncalc, delay, host="127.0.0.1", port=5000, buflen=4096):
                 results.append(response)
             k += 1
     rate = len([item for item in results if item != "n"])/len(results)
+    # fails = 1 - rate
     print(f"\t{ncalc:4d}, {delay:.5f}, {rate:.2f}")
     return results
+
 
 def main():
     """Main entry"""
@@ -113,7 +115,7 @@ def main():
     ax2.set_ylabel("Rate of succes vs total")
     ax2.set_xlabel("Run index")
     ax2.grid()
-    
+
     plt.tight_layout(h_pad=1.1)
     plt.savefig("simplecalc.png")
     plt.show()
